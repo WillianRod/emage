@@ -3,7 +3,7 @@ import React, { PureComponent } from 'react';
 import styles from './HomePage.scss';
 import {
     Upload, Icon, Card,
-    Row, Col,
+    Row, Col, Checkbox,
 } from '../components/antd';
 import CheckboxGroupGrid from '../components/CheckboxGroupGrid';
 import TableProcesses from '../components/TableProcesses';
@@ -69,6 +69,7 @@ export default class HomePage extends PureComponent {
             pngOptions: PNG_OPTIONS.map(o => o.value),
             svgOptions: SVG_OPTIONS.map(o => o.value),
             gifOptions: GIF_OPTIONS.map(o => o.value),
+            keepSource: false,
             processes: [],
             total: {
                 originalSize: 0,
@@ -96,7 +97,7 @@ export default class HomePage extends PureComponent {
 
     _compress = file => {
         this.setState(state => {
-            const { processes } = state;
+            const { processes, keepSource } = state;
             if (processes.find(proc => (
                 proc.getFile().path === file.path && !proc.isFinished()
             ))) {
@@ -106,7 +107,7 @@ export default class HomePage extends PureComponent {
             if (!Array.isArray(selectedOptions)) {
                 return null;
             }
-            const process = new Process(file, selectedOptions);
+            const process = new Process(file, selectedOptions, keepSource);
             process.on('end', this._updateTotal);
             return {
                 processes: [
@@ -131,6 +132,10 @@ export default class HomePage extends PureComponent {
 
     _onSvgOptionChange = checkedValues => {
         this.setState({ svgOptions: checkedValues });
+    }
+
+    _onKeepSourceChange = keepSource => {
+        this.setState({ keepSource });
     }
 
     _updateTotal = () => {
@@ -227,7 +232,7 @@ export default class HomePage extends PureComponent {
     }
 
     render() {
-        const { processes } = this.state;
+        const { processes, keepSource } = this.state;
         return (
             <div>
                 <Card>
@@ -235,7 +240,15 @@ export default class HomePage extends PureComponent {
                     {this._renderOptions()}
                 </Card>
                 <Card>
-                    <h2>2. Pick the image files</h2>
+                    <div className={styles.dropZoneHeader}>
+                        <h2>2. Pick the image files</h2>
+                        <Checkbox
+                            value={keepSource}
+                            onChange={this._onKeepSourceChange}
+                        >
+                            Keep source file
+                        </Checkbox>
+                    </div>
                     <Dragger
                         name="file"
                         multiple

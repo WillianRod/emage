@@ -110,9 +110,10 @@ const getPlugin = (fileType, algorithm) => {
 
 class Process extends EventEmitter {
 
-    constructor(file, algorithms) {
+    constructor(file, algorithms, keepSource) {
         super();
         this.file = file;
+        this.path = this._getPath(keepSource);
         this.originalSize = file.size;
         this.size = file.size;
         this.dir = path.resolve(file.path, '..');
@@ -148,6 +149,19 @@ class Process extends EventEmitter {
 
     getSave = () => 100 - ((this.size / this.originalSize) * 100);
 
+    _copySourceImage = () => {
+        const fileExtension = path.extname(this.file.path);
+        const newPath = this.file.path.replace(fileExtension, ` (1)${fileExtension}`);
+        fs.copyFileSync(this.file.path, newPath);
+        return newPath;
+    }
+
+    _getPath = keepSource => {
+        return keepSource
+            ? this.file.path
+            : this._copySourceImage();
+    }
+
     _createJob = async (algorithm, index, length) => {
         this.currentAlgorithm = { algorithm, index, length };
         this.emit('start', this.currentAlgorithm);
@@ -160,13 +174,14 @@ class Process extends EventEmitter {
     }
 
     _compressImage = algorithm => {
+
         const plugin = getPlugin(this.file.type, algorithm);
-        return imagemin(this.file.path, this.dir, {
+        return imagemin(this.path, this.dir, {
             plugins: [plugin],
         })
             .then(file => {
                 if (file) {
-                    return fs.statSync(file.path).size;
+                    return fs.statSync(this.path).size;
                 }
                 throw new Error(`Invalid file name "${this.file.path}".`);
             })
